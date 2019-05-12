@@ -1,6 +1,10 @@
 const gulp = require("gulp")
 const pug = require('gulp-pug')
 const less = require('gulp-less')
+const browserify = require('browserify')
+const tsify = require('tsify')
+const source = require('vinyl-source-stream')
+const buffer = require('vinyl-buffer')
 const browserSync = require('browser-sync').create();
 const ts = require("gulp-typescript")
 const tsProject = ts.createProject("tsconfig.json")
@@ -11,11 +15,11 @@ const sources = {
     ts: 'src/main.ts'
 }
 
-gulp.task("typescript", function() {
-    return tsProject.src()
-        .pipe(tsProject())
-        .js.pipe(gulp.dest("dist"));
-});
+// gulp.task("typescript", function() {
+//     return tsProject.src()
+//         .pipe(tsProject())
+//         .js.pipe(gulp.dest("dist"));
+// });
 
 gulp.task('less', function() {
     return gulp.src(sources.less)
@@ -39,9 +43,21 @@ gulp.task('sync', function(done) {
     done();
 });
 
+gulp.task('browserify', function() {
+    return browserify()
+        .add('./src/main.ts')
+        .plugin(tsify)
+        .bundle()
+        .pipe(source('bundle.js'))
+        .on('error', err => console.log(err))
+        .pipe(gulp.dest('./dist/'))
+})
+
 gulp.task('watch', function() {
     console.log("watching")
-    gulp.watch([sources.pug, sources.less, sources.ts]).on('change', gulp.series('typescript', 'less', 'pug', browserSync.reload))
+    gulp.watch([sources.pug, sources.less, sources.ts]).on('change', gulp.series('browserify', 'less', 'pug', browserSync.reload))
 });
 
-gulp.task('default', gulp.series('typescript', 'less', 'pug', 'sync', 'watch'));
+
+
+gulp.task('default', gulp.series( 'browserify', 'less', 'pug', 'sync', 'watch'));
