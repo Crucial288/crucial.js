@@ -17129,8 +17129,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-//import less = require('less');
 var _ = require('lodash');
+//require('less/dist/less.min.js')
 var Crucial = /** @class */ (function () {
     function Crucial(id) {
         this.app = null;
@@ -17149,13 +17149,13 @@ var Crucial = /** @class */ (function () {
         var differentNodes = newNodes.filter(function (n) { return !_this.nodes.includes(n); });
         /// Update stored nodes
         this.nodes = newNodes;
+        //console.log(runtimeLess)
         //console.log(IComponent.Implementations())
         for (var _i = 0, differentNodes_1 = differentNodes; _i < differentNodes_1.length; _i++) {
             var node = differentNodes_1[_i];
             var name_1 = node.nodeName.substring(2);
             //name = name.charAt(0).toUpperCase() + name.substring(1).toLowerCase()
             name_1 = _.startCase(name_1.toLowerCase()).replace(/ /g, '');
-            console.log(name_1);
             var component = null;
             for (var _a = 0, _b = CruComponent.Implementations(); _a < _b.length; _a++) {
                 var i = _b[_a];
@@ -17191,10 +17191,10 @@ var CruComponent;
         return implementations;
     }
     CruComponent.Implementations = Implementations;
-    function Register(comp) {
+    function New(comp) {
         implementations.push(comp);
     }
-    CruComponent.Register = Register;
+    CruComponent.New = New;
 })(CruComponent || (CruComponent = {}));
 var Component = /** @class */ (function () {
     function Component(app, container) {
@@ -17205,19 +17205,60 @@ var Component = /** @class */ (function () {
         //this.container = $(id);
         this.container = container;
         this.uid = this.RandomID();
-        this.container.classList.add(this.uid);
+        //this.container.classList.add(this.uid);
         this.Update();
     }
     Component.prototype.Render = function () {
-        var _this = this;
+        console.log('render');
         this.container.innerHTML = this.Template();
-        if (!!this.Style()) {
-            var scoped = "." + this.uid + " {" + this.Style() + "}";
-            less.render(scoped, function (err, out) {
-                _this.container.innerHTML += "<style>" + out.css + "</style>";
-            });
+        /// Add class names to elements for scoped css
+        for (var _i = 0, _a = Array.from(this.container.querySelectorAll('*')); _i < _a.length; _i++) {
+            var child = _a[_i];
+            if (child.nodeName.startsWith('C-')) {
+                continue;
+            }
+            child.classList.add(this.uid);
         }
+        /// Iterate through style string and manually add .uid to every element for scoped css
+        var style = this.ScopedStyle();
+        this.container.innerHTML += "<style>" + style + "</style>";
+        /// Replace [] in Style() with our .uid for scoped css
+        /// Works but not super elegant? Lets us use both scoped and global (or component + children scope)
+        // if (!!this.Style()) {
+        //     let scoped = this.Style().replace(/\[]/g, `.${this.uid}`)
+        //     this.container.innerHTML += `<style>${scoped}</style>`
+        // }
+        /// Use less to wrap css with the .uid class - this makes embedded component also inherit styles
+        // if (!!this.Style()) {
+        //     let scoped = `.${this.uid} {${this.Style()}}`
+        //     less.render(scoped, (err, out) => {
+        //         this.container.innerHTML += `<style>${out.css}</style>`
+        //     })
+        // }
         this.app.Update();
+    };
+    Component.prototype.ScopedStyle = function () {
+        var style = this.Style();
+        var c = '';
+        for (var i = 0; i < style.length; i++) {
+            c = style[i];
+            if (c == '{') {
+                /// Found {, go back until finding element and add scope
+                var count = 0;
+                for (var b = i - 1; b > 0; b--) {
+                    if (style[b] == ' ') {
+                        count++;
+                        continue;
+                    }
+                    var p1 = style.substring(0, b + 1);
+                    var p2 = style.substring(b + 1);
+                    style = p1 + ("." + this.uid) + p2;
+                    i += this.uid.length + count + 1;
+                    break;
+                }
+            }
+        }
+        return style;
     };
     Component.prototype.RandomID = function () {
         return 'c' + Math.random().toString(36).substr(2);
@@ -17245,7 +17286,7 @@ var Button = /** @class */ (function (_super) {
         return /*html*/ "\n            <div>\n                <button class=\"one\">Wow so like this? " + (this.count | 0) + "</button>\n                <button class=\"two\">Wow so like this? " + (this.count2 | 0) + "</button>\n                <c-embedded></c-embedded>\n            </div>\n        ";
     };
     Button.prototype.Style = function () {
-        return /*css*/ "\n            .one {\n                background-color: red;\n            }\n\n            .two {\n                background-color: green;\n            }\n        ".trim();
+        return /*css*/ "\n            div > .one {\n                background-color: red;\n            }\n\n            .two {\n                background-color: green;\n            }\n        ";
     };
     Button.prototype.Bind = function () {
         var _this = this;
@@ -17261,7 +17302,7 @@ var Button = /** @class */ (function (_super) {
         });
     };
     Button = __decorate([
-        CruComponent.Register
+        CruComponent.New
     ], Button);
     return Button;
 }(Component));
@@ -17271,10 +17312,13 @@ var Embedded = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     Embedded.prototype.Template = function () {
-        return '<p>Embedded</p><c-deeper/>';
+        return /*html*/ "\n            <p>Embedded</p>\n            <c-deeper/>\n        ";
+    };
+    Embedded.prototype.Style = function () {
+        return ( /*css*/"\n            p[] {\n                font-size: 3rem;\n            }\n        ");
     };
     Embedded = __decorate([
-        CruComponent.Register
+        CruComponent.New
     ], Embedded);
     return Embedded;
 }(Component));
@@ -17287,7 +17331,7 @@ var Deeper = /** @class */ (function (_super) {
         return ( /*html*/"<p>Deeper</p>");
     };
     Deeper = __decorate([
-        CruComponent.Register
+        CruComponent.New
     ], Deeper);
     return Deeper;
 }(Component));
@@ -17297,10 +17341,13 @@ var ButtonSpace = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     ButtonSpace.prototype.Template = function () {
-        return ( /*html*/"<p>Spaaaaaaaaaaace</p>");
+        return ( /*html*/"\n            <p>Spaaaaaaaaaaace</p>\n        ");
+    };
+    ButtonSpace.prototype.Style = function () {
+        return ( /*css*/"\n        ");
     };
     ButtonSpace = __decorate([
-        CruComponent.Register
+        CruComponent.New
     ], ButtonSpace);
     return ButtonSpace;
 }(Component));

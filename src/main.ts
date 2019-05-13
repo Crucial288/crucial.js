@@ -1,5 +1,5 @@
-//import less = require('less');
 const _ = require('lodash')
+//require('less/dist/less.min.js')
 
 class Crucial {
     private app : Element = null;
@@ -24,6 +24,8 @@ class Crucial {
         /// Update stored nodes
         this.nodes = newNodes;
 
+        //console.log(runtimeLess)
+
         //console.log(IComponent.Implementations())
 
         for (let node of differentNodes) {
@@ -31,8 +33,6 @@ class Crucial {
             let name = node.nodeName.substring(2);
             //name = name.charAt(0).toUpperCase() + name.substring(1).toLowerCase()
             name = _.startCase(name.toLowerCase()).replace(/ /g, '')
-
-            console.log(name);
 
             let component : Component = null;
 
@@ -73,10 +73,11 @@ namespace CruComponent {
         return implementations;
     }
 
-    export function Register<T>(comp: T) {
+    export function New<T>(comp: T) {
         implementations.push(comp);
     }
 }
+
 
 abstract class Component {
     public container : Element = null;
@@ -91,7 +92,7 @@ abstract class Component {
         this.container = container;
 
         this.uid = this.RandomID();
-        this.container.classList.add(this.uid);
+        //this.container.classList.add(this.uid);
 
         this.Update();
     }
@@ -99,17 +100,71 @@ abstract class Component {
     protected abstract Template() : string;
 
     protected Render() {
+        console.log('render')
+
         this.container.innerHTML = this.Template();
 
-        if (!!this.Style()) {
-            let scoped = `.${this.uid} {${this.Style()}}`
-
-            less.render(scoped, (err, out) => {
-                this.container.innerHTML += `<style>${out.css}</style>`
-            })
+        /// Add class names to elements for scoped css
+        for (let child of Array.from(this.container.querySelectorAll('*'))) {
+            if (child.nodeName.startsWith('C-')) {
+                continue;
+            }
+            
+            child.classList.add(this.uid);
         }
 
+        /// Iterate through style string and manually add .uid to every element for scoped css
+        let style = this.ScopedStyle()
+        this.container.innerHTML += `<style>${style}</style>`
+
+        /// Replace [] in Style() with our .uid for scoped css
+        /// Works but not super elegant? Lets us use both scoped and global (or component + children scope)
+        // if (!!this.Style()) {
+        //     let scoped = this.Style().replace(/\[]/g, `.${this.uid}`)
+        //     this.container.innerHTML += `<style>${scoped}</style>`
+        // }
+
+
+        /// Use less to wrap css with the .uid class - this makes embedded component also inherit styles
+        // if (!!this.Style()) {
+        //     let scoped = `.${this.uid} {${this.Style()}}`
+
+        //     less.render(scoped, (err, out) => {
+        //         this.container.innerHTML += `<style>${out.css}</style>`
+        //     })
+        // }
+
         this.app.Update()
+    }
+
+    private ScopedStyle() : string {
+        let style = this.Style()
+        let c = ''
+
+        for (let i = 0; i < style.length; i++) {
+            c = style[i]
+            
+            if (c == '{') {
+                /// Found {, go back until finding element and add scope
+                let count = 0
+                for (let b = i - 1; b > 0; b--) {
+                    if (style[b] == ' ') {
+                        count++
+                        continue;
+                    }
+        
+                    let p1 = style.substring(0, b + 1)
+                    let p2 = style.substring(b + 1)
+        
+                    style = p1 + `.${this.uid}` + p2
+                    i += this.uid.length + count + 1
+                    
+                    break;
+                } 
+            }
+        }
+
+        return style;
     }
 
     private RandomID() : string {
@@ -130,7 +185,7 @@ abstract class Component {
     }
 }
 
-@CruComponent.Register
+@CruComponent.New
 class Button extends Component {
     count: number = 0;
     count2: number = 0;
@@ -147,14 +202,14 @@ class Button extends Component {
 
     Style() : string {
         return /*css*/`
-            .one {
+            div > .one {
                 background-color: red;
             }
 
             .two {
                 background-color: green;
             }
-        `.trim()
+        `
     }
 
     Bind() {
@@ -172,24 +227,42 @@ class Button extends Component {
     }
 }
 
-@CruComponent.Register
+@CruComponent.New
 class Embedded extends Component {
     Template() {
-        return '<p>Embedded</p><c-deeper/>'
+        return /*html*/ `
+            <p>Embedded</p>
+            <c-deeper/>
+        `
+    }
+
+    Style() {
+        return( /*css*/`
+            p[] {
+                font-size: 3rem;
+            }
+        `)
     }
 }
 
-@CruComponent.Register
+@CruComponent.New
 class Deeper extends Component {
     Template() {
         return (/*html*/ `<p>Deeper</p>`)
     }
 }
 
-@CruComponent.Register
+@CruComponent.New
 class ButtonSpace extends Component {
     Template() {
-        return (/*html*/ `<p>Spaaaaaaaaaaace</p>`)
+        return (/*html*/ `
+            <p>Spaaaaaaaaaaace</p>
+        `)
+    }
+
+    Style() {
+        return( /*css*/`
+        `)
     }
 }
 
