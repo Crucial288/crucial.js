@@ -17220,8 +17220,10 @@ var Component = /** @class */ (function () {
             child.classList.add(this.uid);
         }
         /// Iterate through style string and manually add .uid to every element for scoped css
-        var style = this.ScopedStyle();
-        this.container.innerHTML += "<style>" + style + "</style>";
+        if (!!this.Style().trim()) {
+            var style = this.ScopedStyle();
+            this.container.innerHTML += "<style>" + style + "</style>";
+        }
         /// Replace [] in Style() with our .uid for scoped css
         /// Works but not super elegant? Lets us use both scoped and global (or component + children scope)
         // if (!!this.Style()) {
@@ -17286,7 +17288,7 @@ var Button = /** @class */ (function (_super) {
         return /*html*/ "\n            <div>\n                <button class=\"one\">Wow so like this? " + (this.count | 0) + "</button>\n                <button class=\"two\">Wow so like this? " + (this.count2 | 0) + "</button>\n                <c-embedded></c-embedded>\n            </div>\n        ";
     };
     Button.prototype.Style = function () {
-        return /*css*/ "\n            div > .one {\n                background-color: red;\n            }\n\n            .two {\n                background-color: green;\n            }\n        ";
+        return /*css*/ "\n            .one{\n                background-color: red;\n            }\n\n            .two {\n                background-color: green;\n            }\n        ";
     };
     Button.prototype.Bind = function () {
         var _this = this;
@@ -17312,10 +17314,10 @@ var Embedded = /** @class */ (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     Embedded.prototype.Template = function () {
-        return /*html*/ "\n            <p>Embedded</p>\n            <c-deeper/>\n        ";
+        return /*html*/ "\n            <p class=\"one\">Embedded</p>\n            <c-deeper/>\n        ";
     };
     Embedded.prototype.Style = function () {
-        return ( /*css*/"\n            p[] {\n                font-size: 3rem;\n            }\n        ");
+        return ( /*css*/"\n            p {\n                font-size: 3rem;\n            }\n        ");
     };
     Embedded = __decorate([
         CruComponent.New

@@ -114,8 +114,11 @@ abstract class Component {
         }
 
         /// Iterate through style string and manually add .uid to every element for scoped css
-        let style = this.ScopedStyle()
-        this.container.innerHTML += `<style>${style}</style>`
+        if (!!this.Style().trim()) {
+            let style = this.ScopedStyle()
+            this.container.innerHTML += `<style>${style}</style>`
+        }
+
 
         /// Replace [] in Style() with our .uid for scoped css
         /// Works but not super elegant? Lets us use both scoped and global (or component + children scope)
@@ -202,7 +205,7 @@ class Button extends Component {
 
     Style() : string {
         return /*css*/`
-            div > .one {
+            .one{
                 background-color: red;
             }
 
@@ -231,14 +234,14 @@ class Button extends Component {
 class Embedded extends Component {
     Template() {
         return /*html*/ `
-            <p>Embedded</p>
+            <p class="one">Embedded</p>
             <c-deeper/>
         `
     }
 
     Style() {
         return( /*css*/`
-            p[] {
+            p {
                 font-size: 3rem;
             }
         `)
