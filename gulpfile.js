@@ -12,7 +12,8 @@ const tsProject = ts.createProject("tsconfig.json")
 const sources = {
     pug: 'src/*.pug',
     less: 'src/less/*.less',
-    ts: 'src/main.ts'
+    ts: 'src/*.ts',
+    tsComps: 'src/components/*ts'
 }
 
 // gulp.task("typescript", function() {
@@ -37,7 +38,8 @@ gulp.task('sync', function(done) {
     browserSync.init({
         server: {
             baseDir: "./dist/"
-        }
+        },
+        open: false
     });
 
     done();
@@ -55,7 +57,7 @@ gulp.task('browserify', function() {
 
 gulp.task('watch', function() {
     console.log("watching")
-    gulp.watch([sources.pug, sources.less, sources.ts]).on('change', gulp.series('browserify', 'less', 'pug', browserSync.reload))
+    gulp.watch([sources.pug, sources.less, sources.ts, sources.tsComps]).on('change', gulp.series('browserify', 'less', 'pug', browserSync.reload))
 });
 
 
